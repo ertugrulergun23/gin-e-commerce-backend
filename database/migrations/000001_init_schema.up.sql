@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    seller BOOLEAN NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,
+    stock INT DEFAULT 0,
+    point INT DEFAULT 0,
+    seller_id INT REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+    id SERIAL PRIMARY KEY,
+    owner_id INT REFERENCES users(id) ON DELETE CASCADE,
+    product_id INT REFERENCES products(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    point INT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
