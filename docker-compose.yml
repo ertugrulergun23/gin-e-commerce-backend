@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: mypassword
       POSTGRES_DB: mydatabase
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -19,8 +19,11 @@ services:
   app:
     build: .
     container_name: gin_app
+    restart: always
     ports:
-      - "8080:8080"
+      - "8080"
+    env_file:
+      - .env
     volumes:
       - .:/app
     environment:
@@ -32,6 +35,24 @@ services:
     depends_on:
       - postgres
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "8080:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+
+
 
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:

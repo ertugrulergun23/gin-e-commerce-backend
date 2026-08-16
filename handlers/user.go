@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type InputUser struct {
@@ -21,6 +22,15 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Password cannot hashed"})
+		return
+	}
+
+	user.Password = string(hashedPassword)
+
 	if err := h.Db.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -29,23 +39,25 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user-id": user.Id})
 }
 
-// URL = /user/:id
+// URL = /user
 func (h *Handler) GetUser(c *gin.Context) {
 	var user models.User
-	id := c.Param("id")
+	id := c.GetInt("user_id")
 
-	if err := h.Db.First(&user, id).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := h.Db.First(&user, "id = ?", id).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "message": "Kullanıcı bulunamadı !"})
 		return
 	}
+
+	user.Password = " "
 
 	c.JSON(http.StatusOK, user)
 }
 
-// URL = /user/:id/update
+// URL = /user/update
 func (h *Handler) UpdateUser(c *gin.Context) {
 	var user models.User
-	id := c.Param("id")
+	id := c.GetInt("user_id")
 	if err := h.Db.First(&user, id).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -82,10 +94,10 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 
 }
 
-// URL = /user/:id/delete
+// URL = /user/delete
 func (h *Handler) DeleteUser(c *gin.Context) {
 	var user models.User
-	id := c.Param("id")
+	id := c.GetInt("user_id")
 	if err := h.Db.First(&user, id).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
