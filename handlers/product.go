@@ -8,16 +8,35 @@ import (
 )
 
 type InputProduct struct {
-	Name      *string  `json:"name"`
-	Price     *float64 `json:"price"`
-	Stock     *int     `json:"stock"`
-	Point     *float64 `json:"point"`
-	Seller_id *int     `json:"seller_id"`
+	Name  *string  `json:"name"`
+	Price *float64 `json:"price"`
+	Stock *int     `json:"stock"`
+	Point *float64 `json:"point"`
 }
 
 func (h *Handler) GetProducts(c *gin.Context) {
+	name := "%" + c.Query("name") + "%"
+	down_price := c.Query("down_price")
+	up_price := c.Query("up_price")
+	point := c.Query("point")
+
+	query := h.Db.Model(&models.Product{})
+
+	if name != "" {
+		query = query.Where("name LIKE ? ", name)
+	}
+	if down_price != "" {
+		query = query.Where("price >= ?", down_price)
+	}
+	if up_price != "" {
+		query = query.Where("price <= ?", up_price)
+	}
+	if point != "" {
+		query = query.Where("point = ?", point)
+	}
+
 	var products []models.Product
-	if err := h.Db.Find(&products).Error; err != nil {
+	if err := query.Find(&products).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -38,11 +57,27 @@ func (h *Handler) GetProduct(c *gin.Context) {
 }
 
 func (h *Handler) CreateProduct(c *gin.Context) {
-	var product models.Product
-	if err := c.ShouldBindJSON(&product); err != nil {
+	role := c.GetBool("role")
+
+	if !role {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Only sellers can create product"})
+		return
+	}
+	var input InputProduct
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	seller_id := c.GetInt("user_id")
+
+	var product models.Product
+
+	product.Seller_id = seller_id
+	product.Name = *input.Name
+	product.Stock = *input.Stock
+	product.Price = *input.Price
+	product.Point = *input.Point
 
 	if err := h.Db.Create(&product).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -57,6 +92,13 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.Db.Find(&product, id).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	seller_id := c.GetInt("user_id")
+
+	if product.Seller_id != seller_id {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "You can not update this product"})
 		return
 	}
 
@@ -98,6 +140,13 @@ func (h *Handler) DeleteProduct(c *gin.Context) {
 
 	if err := h.Db.Find(&product, id).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	seller_id := c.GetInt("user_id")
+
+	if product.Seller_id != seller_id {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "You can not delete this product"})
+		return
 	}
 
 	if err := h.Db.Delete(&product).Error; err != nil {

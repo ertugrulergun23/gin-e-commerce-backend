@@ -8,15 +8,16 @@ import (
 )
 
 type InputCart struct {
-	Quantity *int
+	Product_id int
+	Quantity   *int
 }
 
-// URL = /cart/:id
+// URL = /cart
 func (h *Handler) GetUserCart(c *gin.Context) {
 	var carts []models.Cart
-	id := c.Param("id")
+	owner_id := c.GetInt("user_id")
 
-	if err := h.Db.Where("user_id = ?", id).Find(&carts).Error; err != nil {
+	if err := h.Db.Where("user_id = ?", owner_id).Find(&carts).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -26,12 +27,18 @@ func (h *Handler) GetUserCart(c *gin.Context) {
 
 // URL = /cart/add
 func (h *Handler) AddProductToCart(c *gin.Context) {
+	var input InputCart
+	user_id := c.GetInt("user_id")
 	var cart models.Cart
 
-	if err := c.ShouldBindJSON(&cart); err != nil {
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	cart.User_id = user_id
+	cart.Product_id = input.Product_id
+	cart.Quantity = *input.Quantity
 
 	if err := h.Db.Create(&cart).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -47,6 +54,13 @@ func (h *Handler) UpdateCart(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.Db.First(&cart, id).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user_id := c.GetInt("user_id")
+
+	if cart.User_id != user_id {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "This user cannot update this cart"})
 		return
 	}
 
@@ -85,12 +99,20 @@ func (h *Handler) UpdateCart(c *gin.Context) {
 
 // URL = /cart/:id/delete
 func (h *Handler) DeleteCart(c *gin.Context) {
-	var cart models.Comment
+	var cart models.Cart
 	id := c.Param("id")
 	if err := h.Db.First(&cart, id).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	user_id := c.GetInt("user_id")
+
+	if user_id != cart.User_id {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "This person cannot delete this comment"})
+		return
+	}
+
 	if err := h.Db.Delete(&cart).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -3,6 +3,7 @@ package handlers
 import (
 	"ecommerce/models"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,13 +13,28 @@ type InputComment struct {
 	Point   *int    `json:"point"`
 }
 
-// URL = /comment/create
+// URL = /comment/create/:product_id
 func (h *Handler) CreateComment(c *gin.Context) {
+	owner_id := c.GetInt("user_id")
+	product_id, err := strconv.Atoi(c.Param("product_id"))
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Uri parameter cannot obtain"})
+		return
+	}
+
+	var input InputComment
 	var comment models.Comment
-	if err := c.ShouldBindJSON(&comment); err != nil {
+
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	comment.Content = *input.Content
+	comment.Point = *input.Point
+	comment.Owner_id = owner_id
+	comment.Product_id = product_id
 
 	if err := h.Db.Create(&comment).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -28,7 +44,7 @@ func (h *Handler) CreateComment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"comment-id": comment.Id})
 }
 
-// URL = /comment/:id
+// URL = /comment/:comment_id
 func (h *Handler) GetComment(c *gin.Context) {
 	var comment models.Comment
 	id := c.Param("id")
@@ -74,6 +90,13 @@ func (h *Handler) UpdateComment(c *gin.Context) {
 		return
 	}
 
+	owner_id := c.GetInt("user_id")
+
+	if owner_id != comment.Owner_id {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "This person cannot updata this comment"})
+		return
+	}
+
 	var input InputComment
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -111,6 +134,14 @@ func (h *Handler) DeleteComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	owner_id := c.GetInt("user_id")
+
+	if owner_id != comment.Owner_id {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "This person cannot delete this comment"})
+		return
+	}
+
 	if err := h.Db.Delete(&comment).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

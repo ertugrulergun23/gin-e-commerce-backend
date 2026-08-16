@@ -1,0 +1,27 @@
+# Domainin olmadığı için "localhost" kullanıyoruz.
+# Caddy, localhost için otomatik olarak kendi dahili CA'sı (internal CA)
+# ile güvenilir bir sertifika üretir. Ekstra ayar gerekmez.
+#
+# Tarayıcıdan https://localhost adresine gittiğinde
+# (ilk seferinde Caddy'nin kök sertifikasını sisteme/tarayıcıya
+# eklemen gerekebilir - Caddy loglarında bunu nasıl yapacağını söyler,
+# ya da aşağıdaki "Caddy Kök Sertifikası" notuna bak).
+
+localhost {
+    reverse_proxy app:8080
+}
+
+# Not: Eğer sadece IP üzerinden (örn. https://192.168.1.5) erişmek istersen
+# aşağıdaki bloğu kullan ve üstteki "localhost" bloğunu yorum satırı yap:
+#
+# https:// {
+#     tls internal
+#     reverse_proxy app:8080
+# }
+#
+# ya da spesifik bir IP için:
+#
+# 192.168.1.5 {
+#     tls internal
+#     reverse_proxy app:8080
+# }
