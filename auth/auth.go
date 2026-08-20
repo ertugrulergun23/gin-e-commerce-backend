@@ -10,12 +10,12 @@ import (
 var jwtSecret = []byte(os.Getenv("JWT_SECRET_KEY"))
 
 type Claims struct {
-	UserID int   `json:"id"`
-	Role   *bool `json:"seller"`
+	UserID int    `json:"id"`
+	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID int, role *bool) (string, error) {
+func GenerateToken(userID int, role string) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		Role:   role,
