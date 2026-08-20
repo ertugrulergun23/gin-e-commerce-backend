@@ -14,15 +14,15 @@ type InputCart struct {
 
 // URL = /cart
 func (h *Handler) GetUserCart(c *gin.Context) {
-	var carts []models.Cart
+	var cart []models.Cart
 	owner_id := c.GetInt("user_id")
 
-	if err := h.Db.Where("user_id = ?", owner_id).Find(&carts).Error; err != nil {
+	if err := h.Db.Where("user_id = ?", owner_id).Find(&cart).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, carts)
+	c.JSON(http.StatusOK, cart)
 }
 
 // URL = /cart/add

@@ -33,7 +33,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := auth.GenerateToken(user.Id, user.Seller)
+	token, err := auth.GenerateToken(user.Id, user.Role)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

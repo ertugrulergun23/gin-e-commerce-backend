@@ -36,7 +36,13 @@ func SetupRouters(db *gorm.DB) *gin.Engine {
 		api.POST("/cart/add", h.AddProductToCart)
 		api.PUT("/cart/:id/update", h.UpdateCart)
 		api.DELETE("/cart/:id/delete", h.DeleteCart)
+		// order model endpoint
+		api.GET("/order", h.GetUserOrders)
+		api.POST("/order/cart", h.CreateOrderFromCart)
+		api.POST("/order/create", h.CreateOrder)
 
+		// only admin endpoint
+		api.PUT("/order/:id/update", h.UpdateOrderStatus)
 	}
 
 	// user create endpoint
@@ -54,6 +60,7 @@ func SetupRouters(db *gorm.DB) *gin.Engine {
 	// Public get comments with filters endpoint
 	router.GET("/comments", h.GetComments)
 
+	// Test endoint
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",

@@ -57,10 +57,10 @@ func (h *Handler) GetProduct(c *gin.Context) {
 }
 
 func (h *Handler) CreateProduct(c *gin.Context) {
-	role := c.GetBool("role")
+	role := c.GetString("role")
 
-	if !role {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Only sellers can create product"})
+	if role != "seller" && role != "admin" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "You can't create product"})
 		return
 	}
 	var input InputProduct
