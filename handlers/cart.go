@@ -7,25 +7,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// InputCart represents the request body for cart operations.
 type InputCart struct {
 	Product_id int
 	Quantity   *int
 }
 
-// URL = /cart
+// GetUserCart retrieves all cart items for the authenticated user.
 func (h *Handler) GetUserCart(c *gin.Context) {
 	var cart []models.Cart
 	owner_id := c.GetInt("user_id")
 
 	if err := h.Db.Where("user_id = ?", owner_id).Find(&cart).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, cart)
 }
 
-// URL = /cart/add
+// AddProductToCart adds a new product to the authenticated user's cart.
 func (h *Handler) AddProductToCart(c *gin.Context) {
 	var input InputCart
 	user_id := c.GetInt("user_id")
@@ -45,22 +46,22 @@ func (h *Handler) AddProductToCart(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Product successfully added to cart", "cartId": cart.Id})
+	c.JSON(http.StatusCreated, gin.H{"message": "Product successfully added to cart", "cartId": cart.Id})
 }
 
-// URL = /cart/:id/update
+// UpdateCart updates the quantity of a cart item. Removes the item if quantity reaches zero.
 func (h *Handler) UpdateCart(c *gin.Context) {
 	var cart models.Cart
 	id := c.Param("id")
 	if err := h.Db.First(&cart, id).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Cart not found"})
 		return
 	}
 
 	user_id := c.GetInt("user_id")
 
 	if cart.User_id != user_id {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "This user cannot update this cart"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "This user cannot update this cart"})
 		return
 	}
 
@@ -97,19 +98,19 @@ func (h *Handler) UpdateCart(c *gin.Context) {
 
 }
 
-// URL = /cart/:id/delete
+// DeleteCart removes a cart item by ID. Only the cart owner can delete.
 func (h *Handler) DeleteCart(c *gin.Context) {
 	var cart models.Cart
 	id := c.Param("id")
 	if err := h.Db.First(&cart, id).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Cart not found"})
 		return
 	}
 
 	user_id := c.GetInt("user_id")
 
 	if user_id != cart.User_id {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "This person cannot delete this comment"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "This user cannot delete this cart"})
 		return
 	}
 
@@ -117,5 +118,5 @@ func (h *Handler) DeleteCart(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Cart deleted succesfully", "comment_id": cart.Id})
+	c.JSON(http.StatusOK, gin.H{"message": "Cart deleted successfully", "cart_id": cart.Id})
 }

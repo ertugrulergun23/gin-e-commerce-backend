@@ -8,13 +8,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// InputUser represents the payload for user profile updates.
 type InputUser struct {
 	Username *string `json:"username"`
 	Email    *string `json:"email"`
 	Password *string `json:"password"`
 }
 
-// URL = /user/create
+// CreateUser registers a new user with a hashed password.
 func (h *Handler) CreateUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBind(&user); err != nil {
@@ -36,30 +37,31 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user-id": user.Id})
+	c.JSON(http.StatusCreated, gin.H{"user-id": user.Id})
 }
 
-// URL = /user
+// GetUser retrieves the authenticated user's profile. Password is masked in the response.
 func (h *Handler) GetUser(c *gin.Context) {
 	var user models.User
 	id := c.GetInt("user_id")
 
 	if err := h.Db.First(&user, "id = ?", id).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "message": "Kullanıcı bulunamadı !"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
+	// Mask the password before returning the response.
 	user.Password = " "
 
 	c.JSON(http.StatusOK, user)
 }
 
-// URL = /user/update
+// UpdateUser updates the authenticated user's profile fields (username, email, password).
 func (h *Handler) UpdateUser(c *gin.Context) {
 	var user models.User
 	id := c.GetInt("user_id")
 	if err := h.Db.First(&user, id).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
@@ -83,6 +85,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		updates["email"] = *input.Email
 	}
 
+	// Ensure at least one field is provided for update.
 	if len(updates) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Insert at least one field to update"})
 		return
@@ -90,21 +93,23 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 
 	if err := h.Db.Model(&user).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
 }
 
-// URL = /user/delete
+// DeleteUser permanently deletes the authenticated user's account.
 func (h *Handler) DeleteUser(c *gin.Context) {
 	var user models.User
 	id := c.GetInt("user_id")
 	if err := h.Db.First(&user, id).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 	if err := h.Db.Delete(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "User deleted succesfully", "user_id": user.Id})
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully", "user_id": user.Id})
 }

@@ -7,6 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// InputProduct represents the request body for creating or updating a product.
+// Pointer fields allow partial updates (nil = no change).
 type InputProduct struct {
 	Name  *string  `json:"name"`
 	Price *float64 `json:"price"`
@@ -14,6 +16,7 @@ type InputProduct struct {
 	Point *float64 `json:"point"`
 }
 
+// GetProducts retrieves products with optional name, price range, and point filters.
 func (h *Handler) GetProducts(c *gin.Context) {
 	name := "%" + c.Query("name") + "%"
 	down_price := c.Query("down_price")
@@ -22,6 +25,7 @@ func (h *Handler) GetProducts(c *gin.Context) {
 
 	query := h.Db.Model(&models.Product{})
 
+	// Apply optional filters based on query parameters
 	if name != "" {
 		query = query.Where("name LIKE ? ", name)
 	}
@@ -37,30 +41,33 @@ func (h *Handler) GetProducts(c *gin.Context) {
 
 	var products []models.Product
 	if err := query.Find(&products).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, products)
 }
 
+// GetProduct retrieves a single product by ID.
 func (h *Handler) GetProduct(c *gin.Context) {
 	id := c.Param("id")
 	var product models.Product
 
 	if err := h.Db.First(&product, id).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
 	}
 
 	c.JSON(http.StatusOK, product)
 }
 
+// CreateProduct creates a new product. Only sellers and admins can create products.
 func (h *Handler) CreateProduct(c *gin.Context) {
 	role := c.GetString("role")
 
+	// Only sellers and admins are allowed to create products
 	if role != "seller" && role != "admin" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "You can't create product"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can't create product"})
 		return
 	}
 	var input InputProduct
@@ -84,21 +91,23 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"product_id": product.Id})
+	c.JSON(http.StatusCreated, gin.H{"product_id": product.Id})
 }
 
+// UpdateProduct updates product fields. Only the product's seller can update.
 func (h *Handler) UpdateProduct(c *gin.Context) {
 	var product models.Product
 	id := c.Param("id")
-	if err := h.Db.Find(&product, id).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := h.Db.First(&product, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
 	}
 
+	// Verify the authenticated user is the product's seller
 	seller_id := c.GetInt("user_id")
 
 	if product.Seller_id != seller_id {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "You can not update this product"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can not update this product"})
 		return
 	}
 
@@ -109,6 +118,7 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 		return
 	}
 
+	// Build partial update map from non-nil fields
 	updates := map[string]interface{}{}
 
 	if input.Name != nil {
@@ -124,7 +134,7 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 	}
 
 	if len(updates) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Insert at least one field to updated"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Insert at least one field to update"})
 		return
 	}
 
@@ -132,25 +142,31 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Product updated successfully", "product_id": product.Id})
 }
 
+// DeleteProduct removes a product by ID. Only the product's seller can delete.
 func (h *Handler) DeleteProduct(c *gin.Context) {
 	var product models.Product
 	id := c.Param("id")
 
-	if err := h.Db.Find(&product, id).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := h.Db.First(&product, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		return
 	}
 
+	// Verify the authenticated user is the product's seller
 	seller_id := c.GetInt("user_id")
 
 	if product.Seller_id != seller_id {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "You can not delete this product"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can not delete this product"})
 		return
 	}
 
 	if err := h.Db.Delete(&product).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Product successfully deleted", "product_id": product.Id})

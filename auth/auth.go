@@ -1,3 +1,4 @@
+// Package auth provides authentication and JWT token management.
 package auth
 
 import (
@@ -7,14 +8,17 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// jwtSecret is the secret key used for signing and parsing JWTs.
 var jwtSecret = []byte(os.Getenv("JWT_SECRET_KEY"))
 
+// Claims represents custom JWT claims containing user ID and role.
 type Claims struct {
 	UserID int    `json:"id"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
+// GenerateToken creates a signed JWT token valid for 24 hours.
 func GenerateToken(userID int, role string) (string, error) {
 	claims := Claims{
 		UserID: userID,
@@ -30,6 +34,7 @@ func GenerateToken(userID int, role string) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
+// ParseToken parses and validates a JWT token string, returning its claims.
 func ParseToken(tokenStr string) (*Claims, error) {
 	claims := &Claims{}
 

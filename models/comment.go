@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// Comment represents a review and rating left on a product.
 type Comment struct {
 	Id         int       `gorm:"primaryKey; column:id" json:"id"`
 	Owner_id   int       `gorm:"column:owner_id" json:"owner_id" binding:"required"`

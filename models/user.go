@@ -1,5 +1,6 @@
 package models
 
+// User represents an application user with credentials and role information.
 type User struct {
 	Id       int    `gorm:"primaryKey;column:id"`
 	Username string `gorm:"column:username;unique" json:"username" binding:"required"`
