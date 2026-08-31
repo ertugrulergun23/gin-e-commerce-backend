@@ -1,5 +1,6 @@
 package models
 
+// Product represents an item listed for sale by a seller.
 type Product struct {
 	Id        int     `gorm:"primaryKey;column:id" json:"id"`
 	Name      string  `gorm:"column:name" json:"name" binding:"required"`

@@ -8,16 +8,18 @@ import (
 	"gorm.io/gorm"
 )
 
+// InputOrder represents the request body for updating an order status.
 type InputOrder struct {
 	Status *string
 }
 
+// InputOrderItem represents the request body for creating an order with a single item.
 type InputOrderItem struct {
 	Product_id int `json:"product_id"`
 	Quantity   int `json:"quantity"`
 }
 
-// URL = /order
+// GetUserOrders retrieves the authenticated user's order and its items.
 func (h *Handler) GetUserOrders(c *gin.Context) {
 	var order models.Order
 	var order_item []models.Order_Item
@@ -25,30 +27,30 @@ func (h *Handler) GetUserOrders(c *gin.Context) {
 	owner_id := c.GetInt("user_id")
 
 	if err := h.Db.Where("owner_id = ?", owner_id).First(&order).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
 	}
 
-	if err := h.Db.Where("order_id = ?", order.Owner_id).Find(&order_item).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := h.Db.Where("order_id = ?", order.Id).Find(&order_item).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"order": order, "order_items": order_item})
 }
 
-// URL = /order/cart
+// CreateOrderFromCart converts the user's cart into an order within a transaction.
 func (h *Handler) CreateOrderFromCart(c *gin.Context) {
 	id := c.GetInt("user_id")
 	var cart []models.Cart
 
 	if err := h.Db.Where("user_id = ?", id).Find(&cart).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if len(cart) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Sepetiniz boş"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Sepetiniz boş"})
 		return
 	}
 
@@ -84,10 +86,10 @@ func (h *Handler) CreateOrderFromCart(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Orders created successfully !"})
+	c.JSON(http.StatusCreated, gin.H{"message": "Orders created successfully !"})
 }
 
-// URL = /order/create
+// CreateOrder creates a new order with a single order item.
 func (h *Handler) CreateOrder(c *gin.Context) {
 	id := c.GetInt("user_id")
 	var input_order_item InputOrderItem
@@ -115,11 +117,11 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Order created successfully"})
+	c.JSON(http.StatusCreated, gin.H{"message": "Order created successfully"})
 
 }
 
-// URL = /order/:id/update
+// UpdateOrderStatus updates the status of an order. Admin only.
 func (h *Handler) UpdateOrderStatus(c *gin.Context) {
 	var input_order InputOrder
 	id := c.Param("id")
@@ -127,7 +129,7 @@ func (h *Handler) UpdateOrderStatus(c *gin.Context) {
 	var order models.Order
 
 	if role != "admin" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "You cannot update the status of order"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "You cannot update the status of order"})
 		return
 	}
 
@@ -137,7 +139,7 @@ func (h *Handler) UpdateOrderStatus(c *gin.Context) {
 	}
 
 	if err := h.Db.Where("id = ?", id).First(&order).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
 	}
 

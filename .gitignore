@@ -1,2 +1,25 @@
+# Environment variables
 .env
+
+# Build outputs and temporary files
+tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Docker
 .dockerignore
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AuthRequired extracts and validates JWT from Authorization header, sets user_id and role in context.
 func AuthRequired(c *gin.Context) {
 	header := c.GetHeader("Authorization")
 	if header == "" || !strings.HasPrefix(header, "Bearer ") {

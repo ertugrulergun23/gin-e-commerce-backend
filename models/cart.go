@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// Cart represents a user's shopping cart item.
 type Cart struct {
 	Id         int       `gorm:"primaryKey;column:id"`
 	User_id    int       `gorm:"column:user_id" json:"user_id"`

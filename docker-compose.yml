@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Veritabanı Servisi
   postgres:
     image: postgres:16-alpine
     container_name: gin_postgres_db
@@ -14,13 +13,17 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d mydatabase"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
 
-  # Gin Backend Servisi
   app:
     build: .
     container_name: gin_app
     restart: always
-    ports:
+    expose:
       - "8080"
     env_file:
       - .env
@@ -33,7 +36,8 @@ services:
       - DB_PASSWORD=mypassword
       - DB_NAME=mydatabase
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   caddy:
     image: caddy:2-alpine
@@ -41,16 +45,13 @@ services:
     restart: always
     ports:
       - "80:80"
-      - "8080:443"
+      - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - app
-
-
-
 
 volumes:
   postgres_data:
